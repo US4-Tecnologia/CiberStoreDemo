@@ -22,8 +22,9 @@ que consome o contrato da API SmartOrder AI (`docs/openapi.yaml` do repo
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
 
-.\gradlew.bat :composeApp:desktopRun          # Desktop (janela)
-.\gradlew.bat :composeApp:assembleDebug       # Android (APK em composeApp\build\outputs\apk\debug\)
+.\gradlew.bat :composeApp:run                       # Desktop (janela) — task canônica do CMP
+.\gradlew.bat :composeApp:desktopRun                # Desktop via task do KGP (carrier do IDE; mainClass configurado no build script)
+.\gradlew.bat :composeApp:assembleDebug             # Android (APK em composeApp\build\outputs\apk\debug\)
 .\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun   # Web (Wasm) no navegador
 ```
 

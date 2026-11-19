@@ -82,3 +82,15 @@ compose.desktop {
         }
     }
 }
+
+// A desktopRun do KGP (KotlinJvmRun, usada como carrier pelo IDE) nao herda o
+// mainClass do compose.desktop.application (que alimenta apenas a task `run` do CMP).
+// Configuramos apos o afterEvaluate do KGP para que `gradlew :composeApp:desktopRun` funcione.
+// A desktopRun do KGP (KotlinJvmRun, usada como carrier pelo IDE) nao herda o
+// mainClass do compose.desktop.application (que alimenta apenas a task `run` do CMP).
+// O KGP reconfigura a task depois dos callbacks de realize; o whenReady e o ultimo
+// momento antes da congelar as propriedades para execucao.
+gradle.taskGraph.whenReady {
+    (allTasks.find { it.name == "desktopRun" } as? JavaExec)
+        ?.mainClass?.set("com.ciberstore.demo.MainKt")
+}
