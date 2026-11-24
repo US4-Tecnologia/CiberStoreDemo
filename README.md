@@ -8,6 +8,18 @@ que consome o contrato da API SmartOrder AI (`docs/openapi.yaml` do repo
 17 testes offline e UI de carrinho (busca → carrinho → sugestões via SSE)
 nos 3 targets.
 
+> **⚠️ Publicação pendente (24/11):** este repo **não tem `origin`**
+> configurado e a máquina não tem `gh` CLI. O código está commitado em
+> `master` @ `9344815`, working tree limpo, mas **ainda local**. Associar/criar
+> o remote na org `US4-Tecnologia` e `git push -u origin master` é a primeira
+> ação administrativa de 25/11.
+>
+> **Retomada em 25/11:** a revalidação com LLM real não rodou hoje — a conta
+> do OpenRouter esgotou as 50 req/dia do pool `:free` (reset 00:00 UTC).
+> Fica para amanhã o SSE com `explicar=true` no app (fase `justificativa`
+> chegando depois do `pool`, sem estourar o timeout de 30 s). Ver
+> [`docs/2026-11-24-m2-m3.md`](docs/2026-11-24-m2-m3.md) §6.
+
 ## Toolchain (validada em 19/11 e 24/11/2026)
 
 | Ferramenta | Versão |
