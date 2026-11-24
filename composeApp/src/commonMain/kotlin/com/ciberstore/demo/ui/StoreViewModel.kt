@@ -1,0 +1,138 @@
+package com.ciberstore.demo.ui
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.ciberstore.demo.data.ApiAction
+import com.ciberstore.demo.data.Repository
+import com.ciberstore.demo.data.dto.ProductItem
+import com.ciberstore.demo.data.dto.SsePayload
+import com.ciberstore.demo.data.dto.SuggestionItem
+import com.ciberstore.demo.data.dto.SuggestionRequest
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+enum class Tela { BUSCA, CARRINHO, SUGESTOES }
+
+data class StoreUiState(
+    val tela: Tela = Tela.BUSCA,
+    val query: String = "",
+    val produtos: List<ProductItem> = emptyList(),
+    val carrinho: List<ProductItem> = emptyList(),
+    val sugestoes: List<SuggestionItem> = emptyList(),
+    val carregandoBusca: Boolean = false,
+    val justificativaPendente: Boolean = false,
+    val fallbackUsado: Boolean = false,
+    val quotaEsgotada: Boolean = false,
+    val mensagem: String? = null,
+)
+
+/**
+ * Estado do demo de carrinho. ViewModel do CMP (decisao do solicitante em
+ * 24/11), com `viewModelScope` para sobreviver a recomposicoes.
+ *
+ * Regra de ouro do contrato v1: a tela de sugestoes **renderiza no `pool`**
+ * (deterministico, ~ms) e so enriquece quando a `justificativa` do LLM
+ * chega. Nunca espera o LLM para mostrar a lista.
+ */
+class StoreViewModel(private val repository: Repository) : ViewModel() {
+    private val _state = MutableStateFlow(StoreUiState())
+    val state: StateFlow<StoreUiState> = _state.asStateFlow()
+
+    fun onQueryChange(valor: String) = _state.update { it.copy(query = valor) }
+
+    fun irPara(tela: Tela) {
+        _state.update { it.copy(tela = tela, mensagem = null) }
+        if (tela == Tela.SUGESTOES) carregarSugestoes()
+    }
+
+    fun buscar() {
+        val q = _state.value.query
+        viewModelScope.launch {
+            _state.update { it.copy(carregandoBusca = true, mensagem = null) }
+            val itens = repository.buscarTudo(q = q, limit = 20)
+            _state.update {
+                it.copy(
+                    carregandoBusca = false,
+                    produtos = itens,
+                    mensagem = if (itens.isEmpty()) "Nenhum produto encontrado" else null,
+                )
+            }
+        }
+    }
+
+    fun adicionar(produto: ProductItem) {
+        _state.update { atual ->
+            if (atual.carrinho.any { it.codProd == produto.codProd } || atual.carrinho.size >= 10) {
+                atual.copy(mensagem = if (atual.carrinho.size >= 10) "Carrinho cheio (max. 10)" else "Item ja no carrinho")
+            } else {
+                atual.copy(carrinho = atual.carrinho + produto, mensagem = null)
+            }
+        }
+    }
+
+    fun remover(codProd: Int) = _state.update {
+        it.copy(carrinho = it.carrinho.filterNot { p -> p.codProd == codProd })
+    }
+
+    private fun carregarSugestoes() {
+        val carrinho = _state.value.carrinho
+        if (carrinho.isEmpty()) {
+            _state.update { it.copy(mensagem = "Adicione um produto ao carrinho primeiro") }
+            return
+        }
+        // Produto-base = ultimo item colocado; os demais viram contexto.
+        val base = carrinho.last()
+        val request = SuggestionRequest(
+            codProd = base.codProd,
+            cartProducts = carrinho.dropLast(1).map { it.codProd },
+            explicar = true,
+        )
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    sugestoes = emptyList(),
+                    justificativaPendente = true,
+                    fallbackUsado = false,
+                    quotaEsgotada = false,
+                    mensagem = null,
+                )
+            }
+            repository.streamSugestoes(
+                request = request,
+                onPool = { pool -> _state.update { it.copy(sugestoes = pool) } },
+                onJustificativa = { explicadas -> _state.update { it.copy(sugestoes = explicadas) } },
+                onDone = { done -> aplicarDone(done) },
+                onErro = { acao -> aplicarErro(acao) },
+            )
+        }
+    }
+
+    private fun aplicarDone(done: SsePayload) {
+        _state.update {
+            it.copy(
+                justificativaPendente = false,
+                fallbackUsado = done.fallbackUsed,
+                quotaEsgotada = done.quotaExhausted,
+                mensagem = done.errors.firstOrNull(),
+            )
+        }
+    }
+
+    private fun aplicarErro(acao: ApiAction) {
+        val texto = when (acao) {
+            is ApiAction.Bloqueado -> "Consulta bloqueada: ${acao.message}"
+            is ApiAction.AvisarOperador -> acao.message
+            is ApiAction.NaoEncontrado -> "Produto nao encontrado no catalogo"
+            is ApiAction.PayloadInvalido -> "Payload invalido: ${acao.message}"
+            is ApiAction.RateLimited -> "Limite de requisicoes. Tente em ${acao.retryAfterSeconds}s"
+            is ApiAction.UsarCacheLocal -> "API indisponivel — exibindo ultimo resultado em cache"
+            is ApiAction.Ok -> null
+        }
+        _state.update {
+            it.copy(justificativaPendente = false, fallbackUsado = true, mensagem = texto)
+        }
+    }
+}
