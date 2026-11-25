@@ -22,6 +22,9 @@ data class ProductItem(
     @SerialName("setor") val setor: String = "",
     @SerialName("categoria") val categoria: String = "",
     @SerialName("tipo") val tipo: String = "",
+    @SerialName("ean") val ean: String = "",
+    @SerialName("marca") val marca: String = "",
+    @SerialName("ref") val ref: String = "",
     @SerialName("relevance") val relevance: Double? = null,
 )
 
@@ -83,6 +86,9 @@ data class SuggestionItem(
     @SerialName("score") val score: Double = 0.0,
     @SerialName("source") val source: String? = null,
     @SerialName("complements_cod") val complementsCod: Int? = null,
+    @SerialName("ean") val ean: String = "",
+    @SerialName("marca") val marca: String = "",
+    @SerialName("ref") val ref: String = "",
 )
 
 @Serializable

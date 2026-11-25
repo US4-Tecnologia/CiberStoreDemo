@@ -13,6 +13,8 @@ private const val BASE_URL = "http://127.0.0.1:8099"
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     CanvasBasedWindow(canvasElementId = "ComposeTarget") {
-        App(criarViewModel(BASE_URL))
+        // Modo demo ligado: abre com um carrinho de exemplo e as sugestoes
+        // ja carregadas (para o cliente ver o fluxo completo em 5 s).
+        App(criarViewModel(BASE_URL, modoDemo = true))
     }
 }

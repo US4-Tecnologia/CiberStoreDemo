@@ -87,12 +87,17 @@ cd D:\GIT\CiberStoreDemo
 .\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun # Web (Chrome)
 
 # --- Testes ---------------------------------------------------------------
-.\gradlew.bat :composeApp:desktopTest               # 21 testes offline (JVM)
-.\gradlew.bat :composeApp:wasmJsBrowserTest         # os mesmos 21 no navegador
+.\gradlew.bat :composeApp:desktopTest               # 27 testes offline (JVM)
+.\gradlew.bat :composeApp:wasmJsBrowserTest         # os mesmos 27 no navegador
 # integracao opt-in contra a API real (4 testes):
 .\gradlew.bat :composeApp:desktopTest "-Dsmartorder.integration=true"
 ```
 
+> **Modo demo:** o app abre **já com um carrinho de exemplo e as sugestões
+> pedidas** (para o cliente ver o fluxo completo em ~5 s, sem digitar). É o
+> modo padrão do desktop e do web; para desligar, chame
+> `criarViewModel(baseUrl)` sem `modoDemo = true`.
+>
 > ⚠️ **PowerShell:** `-Dsmartorder.integration=true` **sem aspas** quebra no `=`
 > (o Gradle interpreta `.integration=true` como nome de task). Use aspas duplas.
 
@@ -121,8 +126,9 @@ a API aberta do dev (`API_KEYS` vazio).
 | Check | Resultado |
 |---|---|
 | `compileKotlinDesktop` / `compileKotlinWasmJs` / `compileDebugKotlinAndroid` | ✅ os 3 |
-| `desktopTest` (offline) | ✅ **21/21** (17 + 4 do `EnriquecerTest`) |
-| `wasmJsBrowserTest` (Karma + Chrome headless) | ✅ **21/21** no navegador |
+| `desktopTest` (offline) | ✅ **29/29** = 17 originais + 4 `EnriquecerTest` + 4 `StoreViewModelTest` + 2 `PayloadIdentidadeTest` + 2 de integração com a API real |
+| `wasmJsBrowserTest` (Karma + Chrome headless) | ✅ **27/27** no navegador |
+| Vitrine do cliente (browser, bundle de produção) | ✅ modo demo abre com carrinho + sugestões com **EAN**, evidência do ranking e justificativa real do LLM; **0 exceções**, 0 erros de console |
 | `desktopTest -Dsmartorder.integration=true` | ✅ **4/4** contra a API real (busca TINTA, `/status`, SSE `pool → done`, SSE `pool → justificativa` com LLM real) |
 | Janela desktop | ✅ abriu (`CiberStore Demo`) |
 | Web | ✅ bundle de produção servido em `http://127.0.0.1:8081` + Chrome headless via CDP: busca → carrinho → Sugestões com **justificativa real do LLM**, 0 erros no console |

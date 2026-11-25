@@ -8,6 +8,8 @@ private val BASE_URL: String = System.getProperty("smartorder.baseUrl") ?: "http
 
 fun main() = application {
     Window(onCloseRequest = ::exitApplication, title = "CiberStore Demo") {
-        App(criarViewModel(BASE_URL))
+        // Modo demo ligado: abre com um carrinho de exemplo e as sugestoes
+        // ja carregadas (para o cliente ver o fluxo completo em 5 s).
+        App(criarViewModel(BASE_URL, modoDemo = true))
     }
 }

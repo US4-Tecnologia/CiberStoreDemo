@@ -16,9 +16,9 @@ import io.ktor.client.HttpClient
  * Um unico [HttpClient] e compartilhado entre REST e SSE. Nenhum timeout de
  * leitura e instalado: a fase `justificativa` do SSE pode levar ate 30 s.
  */
-fun criarViewModel(baseUrl: String, apiKey: String? = null): StoreViewModel {
+fun criarViewModel(baseUrl: String, apiKey: String? = null, modoDemo: Boolean = false): StoreViewModel {
     val client = HttpClient()
     val api = ApiClient(baseUrl, apiKey, client)
     val sse = KtorSseTransport(baseUrl, apiKey, client)
-    return StoreViewModel(Repository(api, sse))
+    return StoreViewModel(Repository(api, sse), modoDemo)
 }

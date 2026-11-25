@@ -37,7 +37,10 @@ data class StoreUiState(
  * (deterministico, ~ms) e so enriquece quando a `justificativa` do LLM
  * chega. Nunca espera o LLM para mostrar a lista.
  */
-class StoreViewModel(private val repository: Repository) : ViewModel() {
+class StoreViewModel(
+    private val repository: Repository,
+    val modoDemo: Boolean = false,
+) : ViewModel() {
     private val _state = MutableStateFlow(StoreUiState())
     val state: StateFlow<StoreUiState> = _state.asStateFlow()
 
@@ -75,6 +78,57 @@ class StoreViewModel(private val repository: Repository) : ViewModel() {
 
     fun remover(codProd: Int) = _state.update {
         it.copy(carrinho = it.carrinho.filterNot { p -> p.codProd == codProd })
+    }
+
+    /**
+     * Acao do **vendedor**: adiciona a sugestao ao carrinho.
+     *
+     * O agente nunca mexe no carrinho -- quem pergunta ao cliente e decide
+     * comprar e o vendedor (decisao D1 do plano de integracao padrao com os
+     * clientes). O app so executa o que o vendedor toca.
+     */
+    fun adicionarSugestao(sugestao: SuggestionItem) {
+        adicionar(
+            ProductItem(
+                codProd = sugestao.codProd,
+                produto = sugestao.product.ifBlank { sugestao.produto },
+                ean = sugestao.ean,
+                marca = sugestao.marca,
+                ref = sugestao.ref,
+            )
+        )
+    }
+
+    /**
+     * Produto de exemplo do modo demo (o mesmo dos testes e da evidencia de
+     * 25/11/2026). Fixo de proposito: o modo demo **nao depende de rede** para
+     * montar o carrinho -- so a justificativa (SSE) vai ao servidor.
+     */
+    private val produtoDemo = ProductItem(
+        codProd = 124,
+        produto = "TINTA ACR 18L DUCRYL",
+        setor = "TINTAS",
+        categoria = "TINTA ACRILICA",
+        tipo = "TINTAS P/ALVENARIA",
+        ean = "7895860040265",
+        marca = "RENNER",
+        ref = "7400.45",
+    )
+
+    /**
+     * Modo demo: ja abre com um carrinho de exemplo e as sugestoes pedidas.
+     *
+     * Chamado pela UI (`LaunchedEffect`), nao no `init` do ViewModel: efeito de
+     * tela pertence a tela, e o `init` com `viewModelScope` derrubava o app
+     * no Wasm (`RuntimeError: illegal cast` no boot, achado de 25/11/2026).
+     */
+    fun carregarDemo() {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(produtos = listOf(produtoDemo), carrinho = listOf(produtoDemo))
+            }
+            irPara(Tela.SUGESTOES)
+        }
     }
 
     private fun carregarSugestoes() {

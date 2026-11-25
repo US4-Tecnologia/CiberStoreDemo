@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -36,6 +37,13 @@ import com.ciberstore.demo.ui.Tela
 @Composable
 fun App(viewModel: StoreViewModel) {
     val state by viewModel.state.collectAsState()
+    // Modo demo: o carrinho de exemplo e as sugestoes sao disparados aqui
+    // (LaunchedEffect), e nao no init do ViewModel -- efeito de tela pertence
+    // a tela, e o init com viewModelScope derrubava o app no Wasm
+    // (RuntimeError: illegal cast no boot, achado de 25/11/2026).
+    LaunchedEffect(Unit) {
+        if (viewModel.modoDemo) viewModel.carregarDemo()
+    }
     MaterialTheme {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
             Cabecalho(state, viewModel)
@@ -140,7 +148,9 @@ private fun SugestoesScreen(state: StoreUiState, viewModel: StoreViewModel) {
     }
     Spacer(Modifier.height(8.dp))
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(state.sugestoes, key = { it.codProd }) { item -> LinhaSugestao(item) }
+        items(state.sugestoes, key = { it.codProd }) { item ->
+            LinhaSugestao(item) { viewModel.adicionarSugestao(item) }
+        }
     }
 }
 
@@ -154,6 +164,13 @@ private fun LinhaProduto(produto: ProductItem, acao: String, onClick: () -> Unit
                     "cod ${produto.codProd} · ${produto.categoria}",
                     style = MaterialTheme.typography.bodySmall,
                 )
+                if (produto.ean.isNotBlank()) {
+                    Text(
+                        "EAN ${produto.ean}" +
+                            if (produto.marca.isNotBlank()) " · ${produto.marca}" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
             Button(onClick = onClick) { Text(acao) }
         }
@@ -161,7 +178,7 @@ private fun LinhaProduto(produto: ProductItem, acao: String, onClick: () -> Unit
 }
 
 @Composable
-private fun LinhaSugestao(item: SuggestionItem) {
+private fun LinhaSugestao(item: SuggestionItem, onAdicionar: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Text(item.product, style = MaterialTheme.typography.bodyLarge)
@@ -169,9 +186,29 @@ private fun LinhaSugestao(item: SuggestionItem) {
                 "cod ${item.codProd} · score ${item.score} · ${item.source ?: "-"}",
                 style = MaterialTheme.typography.bodySmall,
             )
+            // Evidencia do ranking: por que este candidato entrou na lista.
+            Text(
+                "co-ocorrencia ${item.cooccurrence} · faixa ${item.confidenceBand ?: "-"}" +
+                    if (item.complementsCod != null) " · complementa o item ${item.complementsCod}" else "",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            if (item.ean.isNotBlank()) {
+                Text(
+                    "EAN ${item.ean}" +
+                        if (item.marca.isNotBlank()) " · ${item.marca}" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             if (item.reason.isNotBlank()) {
                 Text(item.reason, style = MaterialTheme.typography.bodySmall)
             }
+            // Acao do VENDEDOR: o agente nunca mexe no carrinho -- quem
+            // pergunta ao cliente e adiciona e o vendedor (decisao D1 do plano
+            // de integracao padrao com os clientes).
+            Button(
+                onClick = onAdicionar,
+                modifier = Modifier.padding(top = 8.dp),
+            ) { Text("Adicionar ao carrinho") }
         }
     }
 }
