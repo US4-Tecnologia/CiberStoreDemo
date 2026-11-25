@@ -135,6 +135,7 @@ a API aberta do dev (`API_KEYS` vazio).
 | Android | ✅ `composeApp-debug.apk` (11,7 MB) |
 | CORS preflight | ✅ `OPTIONS` 200 com `Access-Control-Allow-Origin` |
 | Correlação | ✅ `execution.log` da API registrou o `request_id` gerado pelo `TraceId` do app (`297cb343ea19f8dc-cf2289c573c47296`) |
+| Status do teste de integração | [`docs/relatorio-status-teste-integracao-app-demo.md`](docs/relatorio-status-teste-integracao-app-demo.md) — o que já é automatizado e o **checklist do teste manual** que falta |
 
 > Evidência completa de 25/11: [`docs/2026-11-25-revalidacao.md`](docs/2026-11-25-revalidacao.md).
 
