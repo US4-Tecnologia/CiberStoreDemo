@@ -68,4 +68,50 @@ class IntegrationTest {
         assertTrue(ordem.last() == "done", "stream nao fechou com done: $ordem")
         client.close()
     }
+
+    /**
+     * Revalidacao de 25/11/2026: a **segunda fase** do SSE (justificativa por
+     * LLM real) precisa chegar depois do `pool`, sem estourar o timeout.
+     *
+     * Usa o produto 14151 ("TUBO 6,00M 25MM PVC SOLD") de proposito: a chave de
+     * cache da justificativa na API e `(cod_prod, carrinho)` com TTL de 300 s,
+     * entao repetir o 124 usado nos demais testes faria o app pegar `cache_hit`
+     * e nao provaria o caminho do LLM.
+     */
+    @Test
+    fun `SSE real entrega justificativa do LLM depois do pool`() = runTest {
+        if (!ligado) return@runTest
+        val client = HttpClient()
+        val sse = KtorSseTransport(baseUrl, null, client)
+        val api = ApiClient(baseUrl, null, client)
+        val repository = Repository(api, sse)
+
+        val ordem = mutableListOf<String>()
+        var quantidadeJustificativa = 0
+        var motivo = ""
+        var fallback = false
+
+        repository.streamSugestoes(
+            SuggestionRequest(codProd = 14151, explicar = true),
+            onPool = { ordem += "pool:${it.size}" },
+            onJustificativa = { itens ->
+                ordem += "justificativa"
+                quantidadeJustificativa = itens.size
+                motivo = itens.firstOrNull()?.reason.orEmpty()
+            },
+            onDone = { payload ->
+                ordem += "done"
+                fallback = payload.fallbackUsed
+            },
+            onErro = { ordem += "erro:$it" },
+        )
+
+        assertTrue(ordem.firstOrNull()?.startsWith("pool:") == true, "pool nao chegou primeiro: $ordem")
+        assertTrue(ordem.contains("justificativa"), "fase justificativa nao chegou: $ordem")
+        assertTrue(ordem.last() == "done", "stream nao fechou com done: $ordem")
+        assertTrue(quantidadeJustificativa > 0, "justificativa veio vazia")
+        assertTrue(motivo.isNotBlank(), "justificativa sem texto de motivo")
+        assertTrue(!fallback, "a API caiu no fallback deterministico")
+        client.close()
+    }
 }

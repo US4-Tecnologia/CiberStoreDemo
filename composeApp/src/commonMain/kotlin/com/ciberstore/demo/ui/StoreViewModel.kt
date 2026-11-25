@@ -103,7 +103,14 @@ class StoreViewModel(private val repository: Repository) : ViewModel() {
             repository.streamSugestoes(
                 request = request,
                 onPool = { pool -> _state.update { it.copy(sugestoes = pool) } },
-                onJustificativa = { explicadas -> _state.update { it.copy(sugestoes = explicadas) } },
+                onJustificativa = { explicadas ->
+                    // Enriquece o pool: o LLM pode explicar 1 dos N candidatos.
+                    // Substituir a lista inteira perderia as recomendacoes que o
+                    // LLM nao mencionou (achado de 25/11/2026 no browser).
+                    _state.update { atual ->
+                        atual.copy(sugestoes = enriquecer(atual.sugestoes, explicadas))
+                    }
+                },
                 onDone = { done -> aplicarDone(done) },
                 onErro = { acao -> aplicarErro(acao) },
             )
@@ -135,4 +142,23 @@ class StoreViewModel(private val repository: Repository) : ViewModel() {
             it.copy(justificativaPendente = false, fallbackUsado = true, mensagem = texto)
         }
     }
+}
+
+/**
+ * Regra de ouro da UI (M3): a tela **renderiza no `pool`** e **se enriquece**
+ * na `justificativa`. Enriquecer nao e substituir -- se o LLM explica 1 dos 5
+ * candidatos, os outros 4 continuam na tela.
+ *
+ * Em 25/11/2026 a tela mostrava 1 recomendacao (o LLM tinha devolvido 1
+ * candidato valido) porque o `pool` com 5 itens era descartado. Este teste
+ * trava a regra.
+ */
+internal fun enriquecer(
+    pool: List<SuggestionItem>,
+    justificativa: List<SuggestionItem>,
+): List<SuggestionItem> {
+    if (justificativa.isEmpty()) return pool
+    if (pool.isEmpty()) return justificativa
+    val porCod = justificativa.associateBy { it.codProd }
+    return pool.map { item -> porCod[item.codProd] ?: item }
 }

@@ -4,21 +4,18 @@ App demo **Kotlin Multiplatform** (Android + Desktop + Web) em **Compose Multipl
 que consome o contrato da API SmartOrder AI (`docs/openapi.yaml` do repo
 `D:\GIT\SmartAgenteVendasIA`).
 
-**Fase atual: M2 + M3 concluídos (24/11/2026)** — camada compartilhada com
-17 testes offline e UI de carrinho (busca → carrinho → sugestões via SSE)
-nos 3 targets.
+**Fase atual: M2 + M3 concluídos + revalidação com LLM real (25/11/2026)** —
+camada compartilhada, UI de carrinho (busca → carrinho → sugestões via SSE) nos
+3 targets e **21 testes offline** (17 + 4 do `EnriquecerTest`).
 
-> **⚠️ Publicação pendente (24/11):** este repo **não tem `origin`**
-> configurado e a máquina não tem `gh` CLI. O código está commitado em
-> `master` @ `9344815`, working tree limpo, mas **ainda local**. Associar/criar
-> o remote na org `US4-Tecnologia` e `git push -u origin master` é a primeira
-> ação administrativa de 25/11.
+> **✅ Publicado (25/11):** `origin` = `https://github.com/US4-Tecnologia/CiberStoreDemo.git`,
+> branch **`main`** (renomeada de `master`) @ `cc3f06e`, working tree limpo e
+> `git ls-remote` confirmando `refs/heads/main = cc3f06e`.
 >
-> **Retomada em 25/11:** a revalidação com LLM real não rodou hoje — a conta
-> do OpenRouter esgotou as 50 req/dia do pool `:free` (reset 00:00 UTC).
-> Fica para amanhã o SSE com `explicar=true` no app (fase `justificativa`
-> chegando depois do `pool`, sem estourar o timeout de 30 s). Ver
-> [`docs/2026-11-24-m2-m3.md`](docs/2026-11-24-m2-m3.md) §6.
+> **Revalidação com LLM real (25/11):** executada com a cota renovada do pool
+> `:free` (reset 00:00 UTC). O SSE com `explicar=true` no app traz a fase
+> `justificativa` depois do `pool`, sem estourar o timeout de 30 s.
+> Ver [`docs/2026-11-25-revalidacao.md`](docs/2026-11-25-revalidacao.md).
 
 ## Toolchain (validada em 19/11 e 24/11/2026)
 
@@ -90,9 +87,9 @@ cd D:\GIT\CiberStoreDemo
 .\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun # Web (Chrome)
 
 # --- Testes ---------------------------------------------------------------
-.\gradlew.bat :composeApp:desktopTest               # 17 testes offline (JVM)
-.\gradlew.bat :composeApp:wasmJsBrowserTest         # os mesmos 17 no navegador
-# integracao opt-in contra a API real (3 testes):
+.\gradlew.bat :composeApp:desktopTest               # 21 testes offline (JVM)
+.\gradlew.bat :composeApp:wasmJsBrowserTest         # os mesmos 21 no navegador
+# integracao opt-in contra a API real (4 testes):
 .\gradlew.bat :composeApp:desktopTest "-Dsmartorder.integration=true"
 ```
 
@@ -119,19 +116,21 @@ CORS_ALLOW_ORIGINS=http://localhost:8080,http://127.0.0.1:8080,http://localhost:
 **Segurança:** a chave de produção **não** vai para o browser. O demo local usa
 a API aberta do dev (`API_KEYS` vazio).
 
-## Evidência (24/11/2026)
+## Evidência (24/11 e 25/11/2026)
 
 | Check | Resultado |
 |---|---|
 | `compileKotlinDesktop` / `compileKotlinWasmJs` / `compileDebugKotlinAndroid` | ✅ os 3 |
-| `desktopTest` (offline) | ✅ 17/17 |
-| `wasmJsBrowserTest` (Karma + Chrome headless) | ✅ 17/17 |
-| `desktopTest -Dsmartorder.integration=true` | ✅ 3/3 contra a API real (busca TINTA, `/status`, SSE `pool → done`) |
+| `desktopTest` (offline) | ✅ **21/21** (17 + 4 do `EnriquecerTest`) |
+| `wasmJsBrowserTest` (Karma + Chrome headless) | ✅ **21/21** no navegador |
+| `desktopTest -Dsmartorder.integration=true` | ✅ **4/4** contra a API real (busca TINTA, `/status`, SSE `pool → done`, SSE `pool → justificativa` com LLM real) |
 | Janela desktop | ✅ abriu (`CiberStore Demo`) |
-| Web | ✅ dev server HTTP 200, canvas `764×485` inicializado, 0 erros no console |
+| Web | ✅ bundle de produção servido em `http://127.0.0.1:8081` + Chrome headless via CDP: busca → carrinho → Sugestões com **justificativa real do LLM**, 0 erros no console |
 | Android | ✅ `composeApp-debug.apk` (11,7 MB) |
 | CORS preflight | ✅ `OPTIONS` 200 com `Access-Control-Allow-Origin` |
-| Correlação | ✅ `execution.log` da API registrou o `request_id` gerado pelo `TraceId` do app (`98f5335f…-8530a0e25d81a187`) |
+| Correlação | ✅ `execution.log` da API registrou o `request_id` gerado pelo `TraceId` do app (`297cb343ea19f8dc-cf2289c573c47296`) |
+
+> Evidência completa de 25/11: [`docs/2026-11-25-revalidacao.md`](docs/2026-11-25-revalidacao.md).
 
 Registro completo: [`docs/2026-11-24-m2-m3.md`](docs/2026-11-24-m2-m3.md).
 
